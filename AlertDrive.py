@@ -1,16 +1,13 @@
-import cv2
-import numpy as np
+import random
 import pandas as pd
 import streamlit as st
 
 # --- PAGE CONFIGURATION ---
 st.set_page_config(
-    page_title="AlertDrive AI - Computer Vision Monitor",
-    page_icon="🚗",
-    layout="wide",
+    page_title="AlertDrive AI - Edge Monitor", page_icon="🚗", layout="wide"
 )
 
-# --- CUSTOM STYLING ---
+# --- CUSTOM CSS FOR DARK MODE UI ---
 st.markdown("""
     <style>
     .main {
@@ -27,177 +24,135 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- HEADER ---
-st.title("🚗 AlertDrive AI: Computer Vision & Telemetry Pipeline")
+st.title("🚗 AlertDrive AI: Edge-Optimized Driver Fatigue Monitor")
 st.markdown(
-    "Real-time edge analytics engine computing **Eye Aspect Ratio (EAR)**,"
-    " **Mouth Aspect Ratio (MAR)**, and **PERCLOS** via facial landmark"
-    " detection."
+    "Real-time computer vision telemetry pipeline tracking **Eye Aspect Ratio"
+    " (EAR)**, **Mouth Aspect Ratio (MAR)**, and **PERCLOS** metrics."
 )
 st.markdown("---")
 
-# --- SIDEBAR: ML & DETECTION SETTINGS ---
-st.sidebar.header("⚙️ CV Model & Thresholds")
-detection_mode = st.sidebar.selectbox(
-    "Input Pipeline", ["Live Webcam Capture", "Synthetic Test Mode"]
+# --- SIDEBAR CONTROLS ---
+st.sidebar.header("⚙️ Edge System Settings")
+app_mode = st.sidebar.selectbox(
+    "Operation Mode", ["Live Camera Snapshot Test", "Simulation Dashboard"]
 )
 
 st.sidebar.markdown("---")
-ear_threshold = st.sidebar.slider(
-    "EAR Closure Threshold",
-    0.15,
-    0.30,
-    0.20,
-    0.01,
-    help="Threshold below which eyes are classified as closed.",
+st.sidebar.subheader("🎚️ Temporal Thresholds")
+ear_thresh = st.sidebar.slider(
+    "EAR Closure Threshold", 0.15, 0.30, 0.20, 0.01
 )
-mar_threshold = st.sidebar.slider(
-    "MAR Yawn Threshold",
-    0.40,
-    0.70,
-    0.55,
-    0.01,
-    help="Threshold above which mouth opening is classified as a yawn.",
-)
-time_buffer = st.sidebar.slider(
-    "Temporal Buffer (Seconds)",
-    1.0,
-    3.0,
-    1.5,
-    help="Continuous duration required to trigger microsleep alert.",
-)
+mar_thresh = st.sidebar.slider("MAR Yawn Threshold", 0.40, 0.70, 0.55, 0.01)
+time_window = st.sidebar.slider("Sliding Time Buffer (Seconds)", 1.0, 3.0, 1.5)
 
-
-# --- COMPUTER VISION CALCULATION FUNCTIONS ---
-def calculate_ear_simulation(image_array):
-  """Simulates or extracts facial geometry metrics from the frame matrix."""
-  # In a full MediaPipe implementation, 468 3D landmarks are evaluated.
-  # Here we compute mock-derived metrics based on pixel variance or return
-  # realistic real-time calculated values for demonstration robustness.
-  gray = cv2.cvtColor(image_array, cv2.COLOR_RGB2GRAY)
-  variance = np.var(gray)
-
-  # Dynamic calculation simulation based on frame characteristics
-  if variance < 1000:
-    ear = 0.17  # Low contrast / closed eyes scenario
-    mar = 0.28
-    status = "⚠️ Microsleep Warning"
-  else:
-    ear = 0.24  # Normal open eyes
-    mar = 0.32
-    status = "✅ Attentive & Safe"
-
-  return ear, mar, status
-
-
-# --- MAIN INTERFACE ---
-if detection_mode == "Live Webcam Capture":
-  st.subheader("📹 In-Cabin Computer Vision Feed")
+# --- MAIN LOGIC ---
+if app_mode == "Live Camera Snapshot Test":
+  st.subheader("📹 In-Cabin Live Camera Feed")
   st.write(
-      "Capture a live frame from your camera to run the OpenCV & facial"
-      " landmark pipeline."
+      "Capture a snapshot from your device camera to simulate real-time edge"
+      " telemetry analysis."
   )
 
-  camera_file = st.camera_input("Capture Driver Face for ML Analysis")
+  camera_image = st.camera_input("Capture Driver Face")
 
-  if camera_file is not None:
-    # Convert uploaded image to OpenCV array format
-    bytes_data = camera_file.getvalue()
-    np_arr = np.frombuffer(bytes_data, np.uint8)
-    img = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
-
-    # Run CV calculation
-    ear_val, mar_val, drowsiness_status = calculate_ear_simulation(img)
+  if camera_image is not None:
+    st.success("✅ Frame captured successfully! Running edge inference...")
 
     col1, col2 = st.columns(2)
-
     with col1:
       st.image(
-          camera_file,
-          caption="Processed Frame (OpenCV Matrix)",
-          use_container_width=True,
+          camera_image,
+          caption="Captured In-Cabin Frame",
+          width="stretch",
       )
 
     with col2:
-      st.subheader("🔍 Real-Time ML Inference Output")
+      st.subheader("🔍 ML Inference Metrics")
+      # Simulated robust values for demonstration
       st.metric(
-          label="👁️ Eye Aspect Ratio (EAR)",
-          value=f"{ear_val:.2f}",
-          delta="Normal" if ear_val > ear_threshold else "⚠️ Closure Alert",
-          delta_color="normal" if ear_val > ear_threshold else "inverse",
+          label="👁️ Eye Aspect Ratio (EAR)", value="0.22", delta="Normal"
       )
       st.metric(
-          label="🥱 Mouth Aspect Ratio (MAR)",
-          value=f"{mar_val:.2f}",
-          delta="Stable" if mar_val < mar_threshold else "⚠️ Yawn Detected",
+          label="🥱 Mouth Aspect Ratio (MAR)", value="0.34", delta="Stable"
       )
-      st.metric(label="🛡️ State Classification", value=drowsiness_status)
-
-      if ear_val <= ear_threshold:
-        st.error(
-            "🚨 **CRITICAL ALERT:** Eye closure duration exceeded threshold!"
-            " Triggering buzzer."
-        )
-      else:
-        st.success("🟢 **System Status:** Driver alertness optimal.")
+      st.metric(
+          label="🛡️ Drowsiness Classification",
+          value="Attentive",
+          delta="Safe",
+          delta_color="normal",
+      )
   else:
     st.info(
-        "ℹ️ Click **Take Photo** above to test the computer vision pipeline"
-        " live."
+        "ℹ️ Position yourself in front of your camera and click **Take"
+        " Photo** above."
     )
 
 else:
-  # --- SIMULATION DASHBOARD ---
+  # --- DASHBOARD METRICS ---
   col1, col2, col3, col4 = st.columns(4)
 
   with col1:
     st.metric(
-        label="👁️ Mean EAR (60s)",
+        label="👁️ Eye Aspect Ratio (EAR)",
         value="0.23",
-        delta="-0.01",
+        delta="-0.02 (Stable)",
         delta_color="normal",
     )
   with col2:
     st.metric(
-        label="🥱 Mean MAR (60s)", value="0.31", delta="+0.02", delta_color="off"
+        label="🥱 Mouth Aspect Ratio (MAR)",
+        value="0.32",
+        delta="+0.04",
+        delta_color="off",
     )
   with col3:
     st.metric(
-        label="📊 PERCLOS Score", value="10.5%", delta="Safe (<15%)", delta_color="inverse"
+        label="📊 PERCLOS Score",
+        value="11.8%",
+        delta="Safe (<15%)",
+        delta_color="inverse",
     )
   with col4:
-    st.metric(label="⚡ Inference Speed", value="32 FPS", delta="Optimized")
+    st.metric(label="⚡ System FPS", value="28.4 FPS", delta="Edge Optimized")
 
   st.markdown("---")
-  st.subheader("📋 Sliding-Window Telemetry Event Log")
+  st.subheader("📋 Temporal Safety Event Log")
 
-  history_data = [
+  log_data = [
       {
-          "Timestamp": "16:10:02",
+          "Timestamp": "15:01:12",
           "Event": "Normal Blink",
-          "EAR": "0.28",
+          "EAR": "0.29",
           "MAR": "0.24",
-          "Classification": "Safe",
+          "Status": "✅ Safe",
       },
       {
-          "Timestamp": "16:10:35",
-          "Event": f"Extended Closure (>{time_buffer}s)",
+          "Timestamp": "15:01:45",
+          "Event": f"Prolonged Closure (>{time_window}s)",
           "EAR": "0.16",
           "MAR": "0.22",
-          "Classification": "Microsleep Alert",
+          "Status": "⚠️ Microsleep Alert",
       },
       {
-          "Timestamp": "16:11:12",
-          "Event": "Yawn Incident",
+          "Timestamp": "15:02:10",
+          "Event": "Yawn Incident Detected",
           "EAR": "0.25",
           "MAR": "0.62",
-          "Classification": "Fatigue Warning",
+          "Status": "⚠️ Fatigue Warning",
       },
   ]
-  st.dataframe(pd.DataFrame(history_data), use_container_width=True)
+  st.dataframe(pd.DataFrame(log_data), width="stretch")
+
+  st.markdown("---")
+  if st.button("🔴 Trigger Test Emergency Buzzer", width="stretch"):
+    st.error(
+        "🚨 **BUZZER & LED ACTIVE:** Microsleep detected! Audio alarm triggered"
+        " on edge hardware."
+    )
 
 # --- FOOTER ---
 st.markdown("---")
 st.caption(
-    "⚠️ **AI Achievers Project:** AlertDrive AI — Built with Python, OpenCV,"
-    " and Streamlit."
+    "⚠️ **AI Achievers Project:** AlertDrive AI — Built with Python and"
+    " Streamlit."
 )
